@@ -3,12 +3,12 @@
 
 // --- SPI ---
 #define ILI9341_SPI_PORT    spi0
-#define ILI9341_DC_PIN      2
-#define ILI9341_RST_PIN     3
-#define ILI9341_MISO_PIN    4
-#define ILI9341_CS_PIN      5
-#define ILI9341_SCK_PIN     6
-#define ILI9341_MOSI_PIN    7
+#define ILI9341_DC_PIN      21
+#define ILI9341_RST_PIN     20
+#define ILI9341_MISO_PIN    16
+#define ILI9341_CS_PIN      17
+#define ILI9341_SCK_PIN     18
+#define ILI9341_MOSI_PIN    19
 
 #define DATA_BIT            1
 #define COMMAND_BIT         0
