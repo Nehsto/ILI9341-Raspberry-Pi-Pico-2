@@ -1,5 +1,7 @@
 #include "ImageReader.h"
 
+#define BUFPIXELS 200 
+
 const int ImageReader_coreBMP(
     const char *filename, // SD file to load
     const int *tft, // Pointer to TFT object, or NULL if to image
@@ -157,9 +159,6 @@ const int ImageReader_coreBMP(
               }
 
               for (row = 0; row < loadHeight; row++) { // For each scanline...
-#ifdef ESP8266
-                delay(1); // Keep ESP8266 happy
-#endif
                 // Seek to start of scan line.  It might seem labor-intensive
                 // to be doing this on every line, but this method covers a
                 // lot of gritty details like cropping, flip and scanline
@@ -194,21 +193,8 @@ const int ImageReader_coreBMP(
                         tft->dmaWait();
                         tft->endWrite(); // End TFT SPI transact
                       }
-#if defined(ARDUINO_NRF52_ADAFRUIT)
-                      // NRF52840 seems to have trouble reading more than 512
-                      // bytes across certain boundaries. Workaround for now
-                      // is to break the read into smaller chunks...
-                      int32_t bytesToGo = sizeof sdbuf, bytesRead = 0,
-                              bytesThisPass;
-                      while (bytesToGo > 0) {
-                        bytesThisPass = min(bytesToGo, 512);
-                        file.read(&sdbuf[bytesRead], bytesThisPass);
-                        bytesRead += bytesThisPass;
-                        bytesToGo -= bytesThisPass;
-                      }
-#else
+
                       file.read(sdbuf, sizeof sdbuf); // Load from SD
-#endif
                       if (transact)
                         tft->startWrite(); // Start TFT SPI transact
                       if (destidx) {       // If buffered TFT data
