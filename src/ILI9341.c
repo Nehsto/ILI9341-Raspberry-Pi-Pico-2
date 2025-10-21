@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 #include "include/ILI9341.h"
+=======
+#include "ILI9341.h"
+>>>>>>> main
 
 //public
 
@@ -60,6 +64,33 @@ void ILI9341_init(const uint8_t rotation){//spi_inst_t *spi_port, uint dc, uint 
     ILI9341_set_command(ILI9341_DISPLAYON);
 }
 
+<<<<<<< HEAD
+=======
+uint16_t ILI9341_width(){
+    return ILI9341_WIDTH;
+}
+
+uint16_t ILI9341_height(){
+    return ILI9341_HEIGHT;
+}
+
+void ILI9341_startWrite(){
+    cs_select();
+}
+
+void ILI9341_endWrite(){
+    cs_deselect();
+}
+
+void ILI9341_writePixels(){
+
+}
+
+void ILI9341_setAddrWindow(){
+
+}
+
+>>>>>>> main
 void ILI9341_draw_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color){
 	uint16_t buffer[ILI9341_HEIGHT];
 

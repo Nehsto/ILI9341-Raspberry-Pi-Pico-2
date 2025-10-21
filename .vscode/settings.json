@@ -47,6 +47,12 @@
         "string": "c",
         "string_view": "c",
         "span": "c",
+<<<<<<< HEAD
         "random": "c"
+=======
+        "random": "c",
+        "imagereader.h": "c",
+        "cstdint": "c"
+>>>>>>> main
     }
 }

@@ -11,4 +11,8 @@ int main(){
     ILI9341_demo();
 
     return 0;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> main
