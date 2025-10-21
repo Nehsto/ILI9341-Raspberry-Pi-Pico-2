@@ -40,8 +40,8 @@ add_executable(ImageReader_example
 # add_compile_definitions(USE_PRINTF USE_DBG_PRINTF).
 # add_compile_definitions(USE_PRINTF)
 
-target_include_directories(ImageReader_example PRIVATE
-    ~/pico/libraries/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico
+add_subdirectory($ENV{HOME}/pico/libraries/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico
+    ${CMAKE_CURRENT_BINARY_DIR}/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico
 )
 
 # Pull in common dependencies
