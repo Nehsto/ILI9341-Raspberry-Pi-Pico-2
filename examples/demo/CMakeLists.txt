@@ -23,22 +23,16 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
-add_subdirectory(../../src build)
-
 add_executable(ILI9341
 	main.c
+	ILI9341.c
+	"include/ILI9341_hw.h"
 )
 
 # Pull in common dependencies
-target_link_libraries(ILI9341 
-    pico_stdlib 
-    hardware_spi
-    ILI9341_driver
-)
+target_link_libraries(ILI9341 pico_stdlib hardware_spi)
 
 # create map/bin/hex/uf2 file etc.
-pico_add_extra_outputs(ILI9341 PRIVATE
-    ../include
-)
+pico_add_extra_outputs(ILI9341)
 
 target_link_libraries(ILI9341 pico_stdlib)

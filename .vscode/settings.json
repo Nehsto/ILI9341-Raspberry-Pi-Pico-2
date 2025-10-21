@@ -47,6 +47,8 @@
         "string": "c",
         "string_view": "c",
         "span": "c",
-        "random": "c"
+        "random": "c",
+        "imagereader.h": "c",
+        "cstdint": "c"
     }
 }
