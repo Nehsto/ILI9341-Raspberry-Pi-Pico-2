@@ -2,17 +2,29 @@
 
 #define BUFPIXELS 200 
 
-static read_buffer[4];
+static BYTE *read_buffer[4];
+static UINT br;
 
 uint16_t read_16bits(FIL *fileptr){
-  read_bytes(fileptr, read_buffer, 2);
-  return read_buffer[1] << 8 | read_buffer[0];
+  f_read(fileptr, read_buffer, 2, &br);
+  return (uint16_t)read_buffer[1] << 8 | (uint16_t)read_buffer[0];
 }
 
 uint32_t read_32bits(FIL *fileptr){
-  read_bytes(fileptr, read_buffer, 4);
-  return read_buffer[3] << 24 | read_buffer[2] << 16;
-  read_buffer[1] << 8 | read_buffer[0];
+  f_read(fileptr, read_buffer, 4, &br);
+  return(uint32_t)read_buffer[3] << 24 | (uint32_t)read_buffer[2] << 16;
+  (uint32_t)read_buffer[1] << 8 | (uint32_t)read_buffer[0];
+}
+
+const uint16_t ImageReader_drawBMP(const char *filename,
+                                              bool tft, int16_t x,
+                                              int16_t y, bool transact) {
+  uint16_t tftbuf[BUFPIXELS]; // Temp space for buffering TFT data
+  // Call core BMP-reading function, passing address to TFT object,
+  // TFT working buffer, and X & Y position of top-left corner (image
+  // will be cropped on load if necessary). Image pointer is NULL when
+  // reading to TFT, and transact argument is passed through.
+  return coreBMP(filename, true, tftbuf, x, y, NULL, transact);
 }
 
 const uint16_t ImageReader_coreBMP(
@@ -53,15 +65,16 @@ const uint16_t ImageReader_coreBMP(
   uint8_t bitIn = 0;         // Bit number for 1-bit data in
   uint8_t bitOut = 0;        // Column mask for 1-bit data out
 
-  FATFS fs;
+  //FATFS fs;
   FIL file;
   FRESULT fileError;
-  char read_buffer[4];
 
   // If an Adafruit_Image object is passed and currently contains anything,
   // free its contents as it's about to be overwritten with new stuff.
   if (img)
-    img->dealloc();
+    //NOT IMPLEMENTED
+    printf("ERROR: SHOULDN'T BE HERE");
+    //img->dealloc();
 
   // If BMP is being drawn off the right or bottom edge of the screen,
   // nothing to do here. NOT an error, just a trivial clip operation.
@@ -147,7 +160,7 @@ const uint16_t ImageReader_coreBMP(
           //   }
           // }
           // Future: handle other depths.
-          printf("ERROR: SHOULDN'T BE HERE")
+          printf("ERROR: SHOULDN'T BE HERE");
         }
 
         if (dest || dest1) { // Supported format, alloc OK, etc.
@@ -158,26 +171,28 @@ const uint16_t ImageReader_coreBMP(
               ILI9341_startWrite(); // Start SPI (regardless of transact)
               ILI9341_setAddrWindow(x, y, loadWidth, loadHeight);
             } else {
-              if (depth == 1) {
-                img->format = IMAGE_1; // Is a GFX 1-bit canvas type
-              } else {
-                img->format = IMAGE_16; // Is a GFX 16-bit canvas type
-              }
+              // if (depth == 1) {
+              //   img->format = IMAGE_1; // Is a GFX 1-bit canvas type
+              // } else {
+              //   img->format = IMAGE_16; // Is a GFX 16-bit canvas type
+              // }
+              //NOT IMPLEMENTED
+              printf("ERROR: SHOULDN'T BE HERE");
             }
 
-            if ((depth >= 16) ||
-                (quantized = (uint16_t *)malloc(colors * sizeof(uint16_t)))) {
-              if (depth < 16) {
-                // Load and quantize color table
-                for (uint16_t c = 0; c < colors; c++) {
-                  b = sd_spi_read();
-                  g = sd_spi_read();
-                  r = sd_spi_read();
-                  sd_spi_read(); // Ignore 4th byte
-                  quantized[c] =
-                      ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-                }
-              }
+            if ((depth >= 16)){ //||
+                //NOT IMPLEMENTED(quantized = (uint16_t *)malloc(colors * sizeof(uint16_t)))) {
+              // if (depth < 16) {
+              //   // Load and quantize color table
+              //   for (uint16_t c = 0; c < colors; c++) {
+              //     b = sd_spi_read();
+              //     g = sd_spi_read();
+              //     r = sd_spi_read();
+              //     sd_spi_read(); // Ignore 4th byte
+              //     quantized[c] =
+              //         ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+              //   }
+              // }
 
               for (row = 0; row < loadHeight; row++) { // For each scanline...
                 // Seek to start of scan line.  It might seem labor-intensive
@@ -215,7 +230,7 @@ const uint16_t ImageReader_coreBMP(
                         ILI9341_endWrite(); // End TFT SPI transact
                       }
 
-                      f_read(&file, sdbuf, sizeof sdbuf); // Load from SD
+                      f_read(&file, sdbuf, sizeof sdbuf, &br); // Load from SD
                       if (transact)
                         ILI9341_startWrite(); // Start TFT SPI transact
                       if (destidx) {       // If buffered TFT data
@@ -228,7 +243,7 @@ const uint16_t ImageReader_coreBMP(
                         destidx = 0; // and reset dest index
                       }
                     } else {                          // Canvas is simpler,
-                      f_read(&file, sdbuf, sizeof sdbuf); // just load sdbuf
+                      f_read(&file, sdbuf, sizeof sdbuf, &br); // just load sdbuf
                     } // (destidx never resets)
                     srcidx = 0; // Reset bmp buf index
                   }
@@ -277,12 +292,12 @@ const uint16_t ImageReader_coreBMP(
                 }
               } // end scanline loop
 
-              if (quantized) {
-                if (tft)
-                  free(quantized); // Palette no longer needed
-                else
-                  img->palette = quantized; // Keep palette with img
-              }
+              // if (quantized) {
+              //   if (tft)
+              //     free(quantized); // Palette no longer needed
+              //   else
+              //     img->palette = quantized; // Keep palette with img
+              // }
             } // end depth>24 or quantized malloc OK
           } // end top/left clip
         } // end malloc check

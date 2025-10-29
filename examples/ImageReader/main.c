@@ -21,6 +21,14 @@ int main(){
     FRESULT fr = f_mount(&fs, "", 1);
     printf("f_mount returned: %d\n", fr);
 
+    // printf("Checking if f_mount value = %d", FR_OK);
+    // if (FR_OK != fr) {
+    //     panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+    // }
+    // printf("Returned value is valid");
+
+    // ImageReader_drawBMP("pic00.bmp", true, 0, 0, false);
+
     //ILI9341_demo();
 
     return 0;

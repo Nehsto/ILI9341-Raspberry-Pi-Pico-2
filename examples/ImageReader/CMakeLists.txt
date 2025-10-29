@@ -28,6 +28,8 @@ set(CMAKE_CXX_STANDARD 17)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
+set(SKIP_SD False)
+
 add_subdirectory(../../src 
     ${CMAKE_CURRENT_BINARY_DIR}/src
 )

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <pico/stdlib.h>
-#include "include/ILI9341.h"
+
+#include "ILI9341.h"
 
 int main(){
     stdio_init_all();
@@ -11,8 +12,4 @@ int main(){
     ILI9341_demo();
 
     return 0;
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> main

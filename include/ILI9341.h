@@ -12,8 +12,6 @@ enum ROTATION{
 
 void ILI9341_init(const uint8_t rotation);//spi_inst_t *spi_port, uint dc, uint rst, uint miso, uint cs, uint sck, uint mosi);
 
-<<<<<<< HEAD
-=======
 uint16_t ILI9341_width();
 
 uint16_t ILI9341_height();
@@ -26,7 +24,6 @@ void ILI9341_writePixels();
 
 void ILI9341_setAddrWindow();
 
->>>>>>> main
 void ILI9341_set_rotation(const uint8_t rotation);
 
 void ILI9341_draw_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
