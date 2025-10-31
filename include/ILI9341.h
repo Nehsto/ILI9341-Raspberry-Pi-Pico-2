@@ -5,7 +5,7 @@
 
 enum ROTATION{
     HORIZONTAL  = 0x28, //0x08 0x48 
-    //VERTICAL    = 0x68  //0x68 0x28 NOT DEFINED RIGHT NOW, TODO
+    //VERTICAL  = 0x68  //0x68 0x28 NOT DEFINED RIGHT NOW, TODO
 };
 
 //public

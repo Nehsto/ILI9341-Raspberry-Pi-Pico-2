@@ -7,14 +7,9 @@
 
 int main(){
     stdio_init_all();
-    sleep_ms(2000);
+    sleep_ms(1000);
     
     ILI9341_init(HORIZONTAL);
-
-    for (int i = 0; i < 5; i++) {
-        printf("Hello number %d from test-only main!\n", i);
-        sleep_ms(1000);
-    }
 
     FATFS fs;
     FRESULT fr;
@@ -39,17 +34,19 @@ int main(){
     }
     */
 
-    char * file = "img_00.bmp";
-    printf("\nDisplaying \"%s\" properties...\n", file);
-    ImageReader_propertiesBMP(file);
-
     ImageReader_result = ImageReader_drawBMP("img_00.bmp", true, 0, 0, true);
-
     if (ImageReader_result != IMAGE_SUCCESS)
         panic("ImageReader error: %s (%d)\n", ImageReader_result_str(ImageReader_result), ImageReader_result);
-    printf("Image was printed successfully\n");
-    
-    //ILI9341_demo();
+    printf("Image in file %s was printed successfully\n", "img_00.bmp");
+
+    // char *files[5] = {"img_00.bmp", "img_01.bmp", "img_02.bmp", "img_03.bmp", "img_04.bmp"};
+    // for(int i = 0; i < 5; i++){
+    //     ImageReader_result = ImageReader_drawBMP(files[i], true, 0, 0, true);
+
+    //     if (ImageReader_result != IMAGE_SUCCESS)
+    //         panic("ImageReader error: %s (%d)\n", ImageReader_result_str(ImageReader_result), ImageReader_result);
+    //     printf("Image in file %s was printed successfully\n", files[i]);
+    // }
 
     return 0;
 }
