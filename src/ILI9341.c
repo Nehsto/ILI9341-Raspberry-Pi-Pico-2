@@ -76,12 +76,16 @@ void ILI9341_endWrite(){
     cs_deselect();
 }
 
-void ILI9341_writePixels(){
-
+void ILI9341_writePixels(uint16_t *buffer, uint32_t idx){
+    // ILI9341_set_out_writing(0, ILI9341_width() - 1, 0, ILI9341_height() - 1);
+    for(size_t i = 0; i < ILI9341_width(); i++){
+        ILI9341_write_data(buffer, ILI9341_height() * sizeof(uint16_t));
+    }
 }
 
-void ILI9341_setAddrWindow(){
-
+void ILI9341_setAddrWindow(uint16_t x, uint16_t y, 
+    uint16_t loadWidth, uint16_t loadHeight){
+    ILI9341_set_out_writing(x, x + loadWidth - 1, y, y + loadHeight - 1);
 }
 
 void ILI9341_draw_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color){

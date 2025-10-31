@@ -5,15 +5,26 @@
 static BYTE *read_buffer[4];
 static UINT br;
 
+uint8_t read_8bits(FIL *fileptr){
+  FRESULT fr = f_read(fileptr, read_buffer, 1, &br);
+  if (FR_OK != fr) 
+    printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
+  return ((uint8_t)read_buffer[0]);
+}
+
 uint16_t read_16bits(FIL *fileptr){
-  f_read(fileptr, read_buffer, 2, &br);
-  return (uint16_t)read_buffer[1] << 8 | (uint16_t)read_buffer[0];
+  FRESULT fr = f_read(fileptr, read_buffer, 2, &br);
+  if (FR_OK != fr) 
+    printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
+  return ((uint16_t)read_buffer[1] << 8 | (uint16_t)read_buffer[0]);
 }
 
 uint32_t read_32bits(FIL *fileptr){
-  f_read(fileptr, read_buffer, 4, &br);
-  return(uint32_t)read_buffer[3] << 24 | (uint32_t)read_buffer[2] << 16;
-  (uint32_t)read_buffer[1] << 8 | (uint32_t)read_buffer[0];
+  FRESULT fr = f_read(fileptr, read_buffer, 4, &br);
+  if (FR_OK != fr) 
+    printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
+  return ((uint32_t)read_buffer[3] << 24 | (uint32_t)read_buffer[2] << 16 |
+    (uint32_t)read_buffer[1] << 8 | (uint32_t)read_buffer[0]);
 }
 
 const uint16_t ImageReader_drawBMP(const char *filename,
@@ -24,7 +35,7 @@ const uint16_t ImageReader_drawBMP(const char *filename,
   // TFT working buffer, and X & Y position of top-left corner (image
   // will be cropped on load if necessary). Image pointer is NULL when
   // reading to TFT, and transact argument is passed through.
-  return coreBMP(filename, true, tftbuf, x, y, NULL, transact);
+  return ImageReader_coreBMP(filename, true, tftbuf, x, y, NULL, transact);
 }
 
 const uint16_t ImageReader_coreBMP(
@@ -82,17 +93,20 @@ const uint16_t ImageReader_coreBMP(
     return IMAGE_SUCCESS;
 
   // Open requested file on SD card
-  if (FR_OK != (fileError = f_open(&file, filename, FA_OPEN_APPEND | FA_WRITE))) {
+  if (FR_OK != (fileError = f_open(&file, filename, FA_READ))) {
     return IMAGE_ERR_FILE_NOT_FOUND;
   }
 
   // Parse BMP header. 0x4D42 (ASCII 'BM') is the Windows BMP signature.
   // There are other values possible in a .BMP file but these are super
   // esoteric (e.g. OS/2 struct bitmap array) and NOT supported here!
-  if (read_16bits(&file) == 0x4D42) { // BMP signature
+  uint16_t signature = read_16bits(&file);
+  printf("\nSignature: %x\n", signature);
+  if (signature == 0x4D42) { // BMP signature
+    printf("FILE IS BMP\n");
     read_32bits(&file);          // Read & ignore file size
     read_32bits(&file);          // Read & ignore creator bytes
-    offset = read_16bits(&file);      // Start of image data
+    offset = read_32bits(&file);      // Start of image data
     // Read DIB header
     headerSize = read_32bits(&file);
     bmpWidth = read_32bits(&file);
@@ -105,6 +119,7 @@ const uint16_t ImageReader_coreBMP(
     }
     planes = read_16bits(&file);
     depth = read_16bits(&file); // Bits per pixel
+    printf("Depth: %d\n", depth);
     // Compression mode is present in later BMP versions (default = none)
     if (headerSize > 12) {
       compression = read_32bits(&file);
@@ -122,6 +137,7 @@ const uint16_t ImageReader_coreBMP(
     loadHeight = bmpHeight;
     loadX = 0;
     loadY = 0;
+    printf("\nTFT: %d\n", tft);
     if (tft) {
       // Crop area to be loaded (if destination is TFT)
       if (x < 0) {
@@ -139,15 +155,15 @@ const uint16_t ImageReader_coreBMP(
       if ((y + loadHeight) > ILI9341_height())
         loadHeight = ILI9341_height() - y;
     }
-
+    printf("Planes: %d; Compression: %d\n", planes, compression);
     if ((planes == 1) && (compression == 0)) { // Only uncompressed is handled
-
+      printf("Passed!");
       // BMP rows are padded (if needed) to 4-byte boundary
       rowSize = ((depth * bmpWidth + 31) / 32) * 4;
 
       if ((depth == 24) || (depth == 1)) { // BGR or 1-bit bitmap format
 
-        if (img) {
+        // if (img) {
           // // Loading to RAM -- allocate GFX 16-bit canvas type
           // status = IMAGE_ERR_MALLOC; // Assume won't fit to start
           // if (depth == 24) {
@@ -160,11 +176,13 @@ const uint16_t ImageReader_coreBMP(
           //   }
           // }
           // Future: handle other depths.
-          printf("ERROR: SHOULDN'T BE HERE");
-        }
+          // printf("ERROR: SHOULDN'T BE HERE");
+        // }
 
+        printf("\ndest: %x; dest1: %x\n", dest, dest1);
         if (dest || dest1) { // Supported format, alloc OK, etc.
           status = IMAGE_SUCCESS;
+          printf("\nProcessing image data...\n");
 
           if ((loadWidth > 0) && (loadHeight > 0)) { // Clip top/left
             if (tft) {
@@ -180,19 +198,19 @@ const uint16_t ImageReader_coreBMP(
               printf("ERROR: SHOULDN'T BE HERE");
             }
 
-            if ((depth >= 16)){ //||
-                //NOT IMPLEMENTED(quantized = (uint16_t *)malloc(colors * sizeof(uint16_t)))) {
-              // if (depth < 16) {
-              //   // Load and quantize color table
-              //   for (uint16_t c = 0; c < colors; c++) {
-              //     b = sd_spi_read();
-              //     g = sd_spi_read();
-              //     r = sd_spi_read();
-              //     sd_spi_read(); // Ignore 4th byte
-              //     quantized[c] =
-              //         ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-              //   }
-              // }
+            if ((depth >= 16) ||
+                (quantized = (uint16_t *)malloc(colors * sizeof(uint16_t)))) {
+              if (depth < 16) {
+                // Load and quantize color table
+                for (uint16_t c = 0; c < colors; c++) {
+                  b = read_8bits(&file);
+                  g = read_8bits(&file);
+                  r = read_8bits(&file);
+                  read_8bits(&file); // Ignore 4th byte
+                  quantized[c] =
+                      ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+                }
+              }
 
               for (row = 0; row < loadHeight; row++) { // For each scanline...
                 // Seek to start of scan line.  It might seem labor-intensive
@@ -214,7 +232,11 @@ const uint16_t ImageReader_coreBMP(
                   if (img)
                     destidx = ((bmpWidth + 7) / 8) * row;
                 }
-                if (file.fptr != bmpPos) { // Need seek? (Do you need to find where the pointer of the file is?)
+                //
+                // THIS HAS GOT TO BE THE CULPRIT
+                //
+                printf("%d == %d? %s\n", file.fptr, bmpPos, (file.fptr != bmpPos)? "True" : "False");
+                if (br != bmpPos) { // Need seek? (Do you need to find where the pointer of the file is?)
                   if (transact) {
                     // ILI9341_dmaWait();
                     ILI9341_endWrite(); // End TFT SPI transaction
@@ -239,7 +261,7 @@ const uint16_t ImageReader_coreBMP(
                         // alternating 'dest' buffers (else the nonblocking
                         // data out is overwritten in the dest[] write below).
                         // ILI9341_writePixels(dest, destidx, false); // Write it
-                        ILI9341_writePixels(dest, destidx, true); // Write it
+                        ILI9341_writePixels(dest, destidx); // Write it
                         destidx = 0; // and reset dest index
                       }
                     } else {                          // Canvas is simpler,
@@ -284,7 +306,7 @@ const uint16_t ImageReader_coreBMP(
                   if (destidx) { // Any remainders?
                     // See notes above re: DMA
                     // ILI9341_writePixels(dest, destidx, false); // Write it
-                    ILI9341_writePixels(dest, destidx, true); // Write it
+                    ILI9341_writePixels(dest, destidx); // Write it
                     destidx = 0; // and reset dest index
                   }
                   // ILI9341_dmaWait();
@@ -292,12 +314,12 @@ const uint16_t ImageReader_coreBMP(
                 }
               } // end scanline loop
 
-              // if (quantized) {
-              //   if (tft)
-              //     free(quantized); // Palette no longer needed
-              //   else
-              //     img->palette = quantized; // Keep palette with img
-              // }
+              if (quantized) {
+                // if (tft)
+                  free(quantized); // Palette no longer needed
+                // else
+                  // img->palette = quantized; // Keep palette with img
+              }
             } // end depth>24 or quantized malloc OK
           } // end top/left clip
         } // end malloc check
@@ -310,4 +332,60 @@ const uint16_t ImageReader_coreBMP(
     printf("f_close error: %s (%d)\n", FRESULT_str(fileError), fileError);
   }
   return status;
+}
+
+void ImageReader_propertiesBMP(const char * const filename){
+
+  FIL file;
+  FRESULT fileError;
+
+  if (FR_OK != (fileError = f_open(&file, filename, FA_READ))) {
+    printf("properties_FileError: \"%s\" not found\n", filename);
+    return;
+  }
+
+  printf("signature: %x\n", read_16bits(&file));
+  read_32bits(&file);
+  read_32bits(&file);
+  printf("offset: %d\n", read_32bits(&file));
+  uint32_t headerSize = read_32bits(&file);
+  printf("headerSize: %d\n", headerSize);
+  printf("bmpWidth: %d\n", read_32bits(&file));
+  printf("bmpHeight: %d\n", read_32bits(&file));
+  printf("planes: %d\n", read_16bits(&file));
+  printf("depth: %d\n", read_16bits(&file));
+  if (headerSize > 12) {
+      printf("compression: %d\n",read_32bits(&file));
+      read_32bits(&file);    // Raw bitmap data size; ignore
+      read_32bits(&file);    // Horizontal resolution, ignore
+      read_32bits(&file);    // Vertical resolution, ignore
+      printf("colors: %d\n", read_32bits(&file)); // Number of colors in palette, or 0 for 2^depth
+      read_32bits(&file);    // Number of colors used (ignore)
+      // File position should now be at start of palette (if present)
+    }
+
+  fileError = f_close(&file);
+  if (FR_OK != fileError) {
+    printf("f_close error: %s (%d)\n", FRESULT_str(fileError), fileError);
+  }
+}
+
+const char * const ImageReader_result_str(ImageReturnCode code){
+  switch(code){
+    case IMAGE_SUCCESS:            // Successful load (or image clipped off screen)
+      return "IMAGE_SUCCESS";
+      break;
+    case IMAGE_ERR_FILE_NOT_FOUND: // Could not open file
+      return "IMAGE_ERR_FILE_NOT_FOUND";
+      break;
+    case IMAGE_ERR_FORMAT:         // Not a supported image format
+      return "IMAGE_ERR_FORMAT";
+      break;
+    case IMAGE_ERR_MALLOC: 
+      return "IMAGE_ERR_MALLOC";
+      break;
+    default:
+      return "UNKNOWN_ERROR";
+      break;
+  }
 }

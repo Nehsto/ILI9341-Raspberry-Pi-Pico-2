@@ -10,6 +10,7 @@ if(SKIP_SD)
     target_link_libraries(ILI9341_driver
         hardware_spi 
         pico_stdlib
+        pico_stdio_usb
     )
 
 else()
@@ -32,6 +33,7 @@ else()
     target_link_libraries(ImageReader_driver
         hardware_spi 
         pico_stdlib
+        pico_stdio_usb
         no-OS-FatFS-SD-SDIO-SPI-RPi-Pico
     )
-endif
+endif()

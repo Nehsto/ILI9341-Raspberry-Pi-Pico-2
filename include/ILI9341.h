@@ -20,9 +20,10 @@ void ILI9341_startWrite();
 
 void ILI9341_endWrite();
 
-void ILI9341_writePixels();
+void ILI9341_writePixels(uint16_t *buffer, uint32_t idx);
 
-void ILI9341_setAddrWindow();
+void ILI9341_setAddrWindow(uint16_t x, uint16_t y, 
+    uint16_t loadWidth, uint16_t loadHeight);
 
 void ILI9341_set_rotation(const uint8_t rotation);
 

@@ -55,8 +55,8 @@ target_link_libraries(ImageReader_example
     no-OS-FatFS-SD-SDIO-SPI-RPi-Pico
 )
 
-pico_enable_stdio_usb(ImageReader_example 0)
-pico_enable_stdio_uart(ImageReader_example 1)
+pico_enable_stdio_usb(ImageReader_example 1)
+pico_enable_stdio_uart(ImageReader_example 0)
 
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(ImageReader_example)
