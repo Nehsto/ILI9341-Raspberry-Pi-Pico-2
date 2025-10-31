@@ -78,13 +78,14 @@ void ILI9341_endWrite(){
 
 void ILI9341_writePixels(uint16_t *buffer, uint32_t idx){
     // ILI9341_set_out_writing(0, ILI9341_width() - 1, 0, ILI9341_height() - 1);
-    for(size_t i = 0; i < ILI9341_width(); i++){
-        ILI9341_write_data(buffer, ILI9341_height() * sizeof(uint16_t));
-    }
+    // for(size_t i = 0; i < ILI9341_width(); i++){
+        ILI9341_write_data(buffer, ILI9341_width() * sizeof(uint16_t));
+    // }
 }
 
 void ILI9341_setAddrWindow(uint16_t x, uint16_t y, 
     uint16_t loadWidth, uint16_t loadHeight){
+    //ILI9341_set_out_writing(0, ILI9341_WIDTH/2, 0, ILI9341_HEIGHT);
     ILI9341_set_out_writing(x, x + loadWidth - 1, y, y + loadHeight - 1);
 }
 
@@ -153,7 +154,7 @@ void ILI9341_write_data(const void *data, size_t len){
 void ILI9341_set_out_writing(const uint16_t start_x, const uint16_t end_x, const uint16_t start_y, const uint16_t end_y){
     // Column address set.
     // When horizontal, pages are along the x axis (rotated 90 deg)
-    ILI9341_set_command(ILI9341_PASET);
+    ILI9341_set_command(ILI9341_CASET);
 
     ILI9341_command_param((start_x >> 8) & 0xFF);
     ILI9341_command_param(start_x & 0xFF);
@@ -163,7 +164,7 @@ void ILI9341_set_out_writing(const uint16_t start_x, const uint16_t end_x, const
 
     // Page address set.
     // When horizontal, columns are on the y axis (rotated 90 deg)
-    ILI9341_set_command(ILI9341_CASET);
+    ILI9341_set_command(ILI9341_PASET);
 
     ILI9341_command_param((start_y >> 8) & 0xFF);
     ILI9341_command_param(start_y & 0xFF);

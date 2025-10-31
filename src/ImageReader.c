@@ -1,6 +1,6 @@
 #include "ImageReader.h"
 
-#define BUFPIXELS 200 
+#define BUFPIXELS ILI9341_WIDTH
 
 static BYTE *read_buffer[4];
 static UINT br;
@@ -79,6 +79,7 @@ const uint16_t ImageReader_coreBMP(
   //FATFS fs;
   FIL file;
   FRESULT fileError;
+  uint32_t init_pos;
 
   // If an Adafruit_Image object is passed and currently contains anything,
   // free its contents as it's about to be overwritten with new stuff.
@@ -100,6 +101,8 @@ const uint16_t ImageReader_coreBMP(
   // Parse BMP header. 0x4D42 (ASCII 'BM') is the Windows BMP signature.
   // There are other values possible in a .BMP file but these are super
   // esoteric (e.g. OS/2 struct bitmap array) and NOT supported here!
+
+  printf("fptr: %d; bmpPos: %d\n\n", (uint32_t)file.fptr, bmpPos);
   uint16_t signature = read_16bits(&file);
   printf("\nSignature: %x\n", signature);
   if (signature == 0x4D42) { // BMP signature
@@ -155,6 +158,7 @@ const uint16_t ImageReader_coreBMP(
       if ((y + loadHeight) > ILI9341_height())
         loadHeight = ILI9341_height() - y;
     }
+    printf("fptr: %d; bmpPos: %d\n\n", (uint32_t)file.fptr, bmpPos);
     printf("Planes: %d; Compression: %d\n", planes, compression);
     if ((planes == 1) && (compression == 0)) { // Only uncompressed is handled
       printf("Passed!");
@@ -232,11 +236,8 @@ const uint16_t ImageReader_coreBMP(
                   if (img)
                     destidx = ((bmpWidth + 7) / 8) * row;
                 }
-                //
-                // THIS HAS GOT TO BE THE CULPRIT
-                //
-                printf("%d == %d? %s\n", file.fptr, bmpPos, (file.fptr != bmpPos)? "True" : "False");
-                if (br != bmpPos) { // Need seek? (Do you need to find where the pointer of the file is?)
+                printf("%d == %d? %s\n", (uint32_t)file.fptr, bmpPos, ((uint32_t)file.fptr != bmpPos)? "True" : "False");
+                if ((uint32_t)file.fptr != bmpPos) { // Need seek? (Do you need to find where the pointer of the file is?)
                   if (transact) {
                     // ILI9341_dmaWait();
                     ILI9341_endWrite(); // End TFT SPI transaction
@@ -244,6 +245,9 @@ const uint16_t ImageReader_coreBMP(
                   f_lseek(&file, bmpPos);     // Seek = SD transaction
                   srcidx = sizeof sdbuf; // Force buffer reload
                 }
+                printf("AFTER %d == %d? %s\n\n", (uint32_t)file.fptr, bmpPos, ((uint32_t)file.fptr != bmpPos)? "True" : "False");
+                printf("loadWidth: %d\n\n", loadWidth);
+                printf("destidx: %d\n", destidx);
                 for (col = 0; col < loadWidth; col++) { // For each pixel...
                   if (srcidx >= sizeof sdbuf) {         // Time to load more?
                     if (tft) {                          // Drawing to TFT?
@@ -275,7 +279,9 @@ const uint16_t ImageReader_coreBMP(
                     g = sdbuf[srcidx++];
                     r = sdbuf[srcidx++];
                     dest[destidx++] =
-                        ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+                        //((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+                        RGB_to_16bit(r, g, b);
+                        printf("destidx: %d\n", destidx);
                   } else {
                     // Extract 1-bit color index
                     uint8_t n = (sdbuf[srcidx] >> bitIn) & 1;
@@ -302,6 +308,8 @@ const uint16_t ImageReader_coreBMP(
                     }
                   }
                 } // end pixel loop
+                printf("col: %d\n", col);
+                printf("after, destidx: %d\n", destidx);
                 if (tft) {       // Drawing to TFT?
                   if (destidx) { // Any remainders?
                     // See notes above re: DMA

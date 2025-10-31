@@ -39,7 +39,11 @@ int main(){
     }
     */
 
-    ImageReader_result = ImageReader_drawBMP("img_00.bmp", true, 0, 0, false);
+    char * file = "img_00.bmp";
+    printf("\nDisplaying \"%s\" properties...\n", file);
+    ImageReader_propertiesBMP(file);
+
+    ImageReader_result = ImageReader_drawBMP("img_00.bmp", true, 0, 0, true);
 
     if (ImageReader_result != IMAGE_SUCCESS)
         panic("ImageReader error: %s (%d)\n", ImageReader_result_str(ImageReader_result), ImageReader_result);

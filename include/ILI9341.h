@@ -4,7 +4,7 @@
 #include "ILI9341_hw.h"
 
 enum ROTATION{
-    HORIZONTAL  = 0x08, //0x08 0x48 
+    HORIZONTAL  = 0x28, //0x08 0x48 
     //VERTICAL    = 0x68  //0x68 0x28 NOT DEFINED RIGHT NOW, TODO
 };
 
