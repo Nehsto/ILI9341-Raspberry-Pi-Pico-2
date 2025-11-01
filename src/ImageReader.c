@@ -2,14 +2,14 @@
 
 #define BUFPIXELS ILI9341_WIDTH
 
-static BYTE *read_buffer[4];
+static BYTE read_buffer[4];
 static UINT br;
 
 uint8_t read_8bits(FIL *fileptr){
   FRESULT fr = f_read(fileptr, read_buffer, 1, &br);
   if (FR_OK != fr) 
     printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
-  return ((uint8_t)read_buffer[0]);
+  return (read_buffer[0]);
 }
 
 uint16_t read_16bits(FIL *fileptr){

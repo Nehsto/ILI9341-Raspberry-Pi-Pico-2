@@ -9,6 +9,11 @@
 #define ILI9341_CS_PIN      17
 #define ILI9341_SCK_PIN     18
 #define ILI9341_MOSI_PIN    19
+#define ILI9341_LED_PIN     22
+
+#define ILI9341_PWM_SLICE   PWM_GPIO_SLICE_NUM(ILI9341_LED_PIN)
+#define ILI9341_PWM_CLKDIV  4.f
+#define DELAYMS_HOLD_IMAGE  5000
 
 #define DATA_BIT            1
 #define COMMAND_BIT         0
@@ -41,6 +46,7 @@
 
 #include <pico/stdlib.h>
 #include "hardware/spi.h"
+#include "hardware/pwm.h"
 #include "pico/binary_info.h"
 
 #endif

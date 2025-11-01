@@ -28,6 +28,8 @@ void ILI9341_init(const uint8_t rotation){//spi_inst_t *spi_port, uint dc, uint 
     // Make the CS pin available to picotool
     // bi_decl(bi_1pin_with_name(PICO_DEFAULT_SPI_CSN_PIN, "SPI CS"));
 
+    ILI9341_pwm_init();
+
     uint8_t data[15] = { 0x0f, 0x31, 0x2b, 0x0c, 0x0e, 0x08, 0x4e, 0xf1,
 		0x37, 0x07, 0x10, 0x03, 0x0e, 0x09, 0x00};
     uint8_t data2[15]= { 0x00, 0x0e, 0x14, 0x03, 0x11, 0x07, 0x31, 0xc1,
@@ -77,15 +79,12 @@ void ILI9341_endWrite(){
 }
 
 void ILI9341_writePixels(uint16_t *buffer, uint32_t idx){
-    // ILI9341_set_out_writing(0, ILI9341_width() - 1, 0, ILI9341_height() - 1);
-    // for(size_t i = 0; i < ILI9341_width(); i++){
-        ILI9341_write_data(buffer, ILI9341_width() * sizeof(uint16_t));
-    // }
+    ILI9341_write_data(buffer, ILI9341_width() * sizeof(uint16_t));
+
 }
 
 void ILI9341_setAddrWindow(uint16_t x, uint16_t y, 
     uint16_t loadWidth, uint16_t loadHeight){
-    //ILI9341_set_out_writing(0, ILI9341_WIDTH/2, 0, ILI9341_HEIGHT);
     ILI9341_set_out_writing(x, x + loadWidth - 1, y, y + loadHeight - 1);
 }
 
@@ -101,6 +100,17 @@ void ILI9341_draw_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, 
         ILI9341_write_data(buffer, height * sizeof(uint16_t));
     }
 }
+
+#ifdef ILI9341_LED_PIN
+void ILI9341_toggle_led(bool led_on){
+    going_up = led_on;
+    irq_set_enabled(PWM_DEFAULT_IRQ_NUM(), true);
+}
+
+bool ILI9341_is_led_switching(){
+    return irq_is_enabled(PWM_DEFAULT_IRQ_NUM());
+}
+#endif
 
 void ILI9341_demo(){
     ILI9341_clear();
@@ -191,6 +201,44 @@ void ILI9341_sw_reset(){
     ILI9341_set_command(ILI9341_SWRESET);
     sleep_ms(BOOTUP_SLEEP_MS);
 }
+
+#ifdef ILI9341_LED_PIN
+void on_pwm_wrap() {
+    static int fade = 0;
+    pwm_clear_irq(pwm_gpio_to_slice_num(ILI9341_LED_PIN));
+
+    if (going_up) {
+        ++fade;
+        if (fade > 255) {
+            fade = 255;
+            going_up = false;
+            irq_set_enabled(PWM_DEFAULT_IRQ_NUM(), false);
+        }
+    } else {
+        --fade;
+        if (fade < 0) {
+            fade = 0;
+            going_up = true;
+            irq_set_enabled(PWM_DEFAULT_IRQ_NUM(), false);
+        }
+    }
+    pwm_set_gpio_level(ILI9341_LED_PIN, fade * fade);
+}
+
+void ILI9341_pwm_init() {
+    gpio_set_function(ILI9341_LED_PIN, GPIO_FUNC_PWM);
+    
+    pwm_clear_irq(ILI9341_PWM_SLICE);
+    pwm_set_irq_enabled(ILI9341_PWM_SLICE, true);
+    irq_set_exclusive_handler(PWM_DEFAULT_IRQ_NUM(), on_pwm_wrap);
+    irq_set_enabled(PWM_DEFAULT_IRQ_NUM(), false);
+
+    pwm_config config = pwm_get_default_config();
+    pwm_config_set_clkdiv(&config, ILI9341_PWM_CLKDIV);
+    pwm_set_gpio_level(ILI9341_LED_PIN, 0);
+    pwm_init(ILI9341_PWM_SLICE, &config, true);
+}
+#endif
 
 uint16_t RGB_to_16bit(uint8_t r, uint8_t g, uint8_t b){
     r >>= 3;

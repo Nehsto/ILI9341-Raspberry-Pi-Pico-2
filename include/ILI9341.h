@@ -29,6 +29,12 @@ void ILI9341_set_rotation(const uint8_t rotation);
 
 void ILI9341_draw_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint16_t color);
 
+#ifdef ILI9341_LED_PIN
+void ILI9341_toggle_led(bool led_on);
+
+bool ILI9341_is_led_switching();
+#endif
+
 void ILI9341_demo();
 
 //private
@@ -46,6 +52,13 @@ void ILI9341_clear();
 void ILI9341_hw_reset();
 
 void ILI9341_sw_reset();
+
+#ifndef ILI9341_LED_PIN
+#warning ILI9341 screen fading requires a ILI9341_LED_PIN definition
+#else
+static bool going_up;
+void ILI9341_pwm_init();
+#endif
 
 uint16_t RGB_to_16bit(uint8_t r, uint8_t g, uint8_t b);
 
