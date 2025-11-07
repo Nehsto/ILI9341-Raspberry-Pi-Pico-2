@@ -29,8 +29,8 @@ set(CMAKE_CXX_STANDARD 17)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-set(SKIP_SD False)
-
+set(ADD_SD TRUE)
+set(ADD_I2S FALSE)
 
 add_subdirectory(../../src 
     ${CMAKE_CURRENT_BINARY_DIR}/src
@@ -51,11 +51,7 @@ add_subdirectory($ENV{HOME}/pico/libraries/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico/src
 
 # Pull in common dependencies
 target_link_libraries(${PROJECT_NAME} 
-    pico_stdlib 
-    hardware_spi
-    pico_stdio_usb
     ${DIR_NAME_NOPATH}_driver
-    no-OS-FatFS-SD-SDIO-SPI-RPi-Pico
 )
 
 pico_enable_stdio_usb(${PROJECT_NAME} 1)

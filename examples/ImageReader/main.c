@@ -1,5 +1,4 @@
 #include <stdio.h>
-
 #include <pico/stdlib.h>
 
 #include "ILI9341.h"

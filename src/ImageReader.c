@@ -2,31 +2,6 @@
 
 #define BUFPIXELS ILI9341_WIDTH
 
-static BYTE read_buffer[4];
-static UINT br;
-
-uint8_t read_8bits(FIL *fileptr){
-  FRESULT fr = f_read(fileptr, read_buffer, 1, &br);
-  if (FR_OK != fr) 
-    printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
-  return (read_buffer[0]);
-}
-
-uint16_t read_16bits(FIL *fileptr){
-  FRESULT fr = f_read(fileptr, read_buffer, 2, &br);
-  if (FR_OK != fr) 
-    printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
-  return ((uint16_t)read_buffer[1] << 8 | (uint16_t)read_buffer[0]);
-}
-
-uint32_t read_32bits(FIL *fileptr){
-  FRESULT fr = f_read(fileptr, read_buffer, 4, &br);
-  if (FR_OK != fr) 
-    printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
-  return ((uint32_t)read_buffer[3] << 24 | (uint32_t)read_buffer[2] << 16 |
-    (uint32_t)read_buffer[1] << 8 | (uint32_t)read_buffer[0]);
-}
-
 const uint16_t ImageReader_drawBMP(const char *filename,
                                               bool tft, int16_t x,
                                               int16_t y, bool transact) {
@@ -83,10 +58,12 @@ const uint16_t ImageReader_coreBMP(
 
   // If an Adafruit_Image object is passed and currently contains anything,
   // free its contents as it's about to be overwritten with new stuff.
-  if (img)
+  if (img){
     //NOT IMPLEMENTED
     printf("ERROR: SHOULDN'T BE HERE");
+    return IMAGE_ERR_FORMAT;
     //img->dealloc();
+  }
 
   // If BMP is being drawn off the right or bottom edge of the screen,
   // nothing to do here. NOT an error, just a trivial clip operation.
@@ -200,6 +177,7 @@ const uint16_t ImageReader_coreBMP(
               // }
               //NOT IMPLEMENTED
               printf("ERROR: SHOULDN'T BE HERE");
+              return IMAGE_ERR_FORMAT;
             }
 
             if ((depth >= 16) ||
@@ -236,7 +214,6 @@ const uint16_t ImageReader_coreBMP(
                   if (img)
                     destidx = ((bmpWidth + 7) / 8) * row;
                 }
-                printf("%d == %d? %s\n", (uint32_t)file.fptr, bmpPos, ((uint32_t)file.fptr != bmpPos)? "True" : "False");
                 if ((uint32_t)file.fptr != bmpPos) { // Need seek? (Do you need to find where the pointer of the file is?)
                   if (transact) {
                     // ILI9341_dmaWait();
@@ -245,9 +222,6 @@ const uint16_t ImageReader_coreBMP(
                   f_lseek(&file, bmpPos);     // Seek = SD transaction
                   srcidx = sizeof sdbuf; // Force buffer reload
                 }
-                printf("AFTER %d == %d? %s\n\n", (uint32_t)file.fptr, bmpPos, ((uint32_t)file.fptr != bmpPos)? "True" : "False");
-                printf("loadWidth: %d\n\n", loadWidth);
-                printf("destidx: %d\n", destidx);
                 for (col = 0; col < loadWidth; col++) { // For each pixel...
                   if (srcidx >= sizeof sdbuf) {         // Time to load more?
                     if (tft) {                          // Drawing to TFT?
@@ -281,7 +255,6 @@ const uint16_t ImageReader_coreBMP(
                     dest[destidx++] =
                         //((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
                         RGB_to_16bit(r, g, b);
-                        printf("destidx: %d\n", destidx);
                   } else {
                     // Extract 1-bit color index
                     uint8_t n = (sdbuf[srcidx] >> bitIn) & 1;
@@ -308,8 +281,6 @@ const uint16_t ImageReader_coreBMP(
                     }
                   }
                 } // end pixel loop
-                printf("col: %d\n", col);
-                printf("after, destidx: %d\n", destidx);
                 if (tft) {       // Drawing to TFT?
                   if (destidx) { // Any remainders?
                     // See notes above re: DMA

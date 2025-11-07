@@ -24,7 +24,8 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
-set(SKIP_SD True)
+set(ADD_SD TRUE)
+set(ADD_I2S FALSE)
 
 add_subdirectory(../../src 
     ${CMAKE_CURRENT_BINARY_DIR}/src
@@ -37,7 +38,6 @@ add_executable(${PROJECT_NAME}
 # Pull in common dependencies
 target_link_libraries(${PROJECT_NAME} 
     pico_stdlib 
-    hardware_spi
     ${DIR_NAME_NOPATH}_driver
 )
 

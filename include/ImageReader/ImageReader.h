@@ -7,6 +7,7 @@
 #include <stdbool.h>
 
 #include "ILI9341.h"
+#include "fileread.h"
 #include "f_util.h"
 #include "ff.h"
 
