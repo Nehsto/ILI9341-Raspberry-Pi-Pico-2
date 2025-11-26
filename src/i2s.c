@@ -27,7 +27,7 @@
 #include "hardware/irq.h"
 #include "i2s.pio.h"
 
-const i2s_config i2s_config_default = {48000, 256, 32, 10, 6, 7, 8, true};
+const i2s_config i2s_config_default = {48000, 256, 16, 10, 6, 7, 8, true};
 
 static float pio_div(float freq, uint16_t* div, uint8_t* frac) {
     float clk   = (float)clock_get_hz(clk_sys);
@@ -89,7 +89,7 @@ static void dma_double_buffer_init(pio_i2s* i2s, void (*dma_handler)(void)) {
     channel_config_set_read_increment(&c, true);
     channel_config_set_write_increment(&c, false);
     channel_config_set_ring(&c, false, 3);
-    channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_16);
     dma_channel_configure(i2s->dma_ch_out_ctrl, &c, &dma_hw->ch[i2s->dma_ch_out_data].al3_read_addr_trig, i2s->out_ctrl_blocks, 1, false);
 
     c = dma_channel_get_default_config(i2s->dma_ch_out_data);
@@ -110,7 +110,7 @@ static void dma_double_buffer_init(pio_i2s* i2s, void (*dma_handler)(void)) {
     channel_config_set_read_increment(&c, true);
     channel_config_set_write_increment(&c, false);
     channel_config_set_ring(&c, false, 3);
-    channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_16);
     dma_channel_configure(i2s->dma_ch_in_ctrl, &c, &dma_hw->ch[i2s->dma_ch_in_data].al2_write_addr_trig, i2s->in_ctrl_blocks, 1, false);
 
     c = dma_channel_get_default_config(i2s->dma_ch_in_data);
@@ -136,6 +136,53 @@ static void dma_double_buffer_init(pio_i2s* i2s, void (*dma_handler)(void)) {
     // Enable all the dma channels
     dma_channel_start(i2s->dma_ch_out_ctrl);  // This will trigger-start the out chan
     dma_channel_start(i2s->dma_ch_in_ctrl);   // This will trigger-start the in chan
+}
+
+// Output-only DMA initialization - triggers IRQ on output DMA completion
+// This allows feeding data directly from SD card without input dependency
+static void dma_output_only_init(pio_i2s* i2s, void (*dma_handler)(void)) {
+    // Set up DMA for PIO I2S output only - no input channels needed
+    i2s->dma_ch_out_ctrl = dma_claim_unused_channel(true);
+    i2s->dma_ch_out_data = dma_claim_unused_channel(true);
+    
+    // Mark input channels as unused
+    i2s->dma_ch_in_ctrl = 0xFF;
+    i2s->dma_ch_in_data = 0xFF;
+
+    // Control blocks support double-buffering with interrupts on buffer change
+    i2s->out_ctrl_blocks[0] = i2s->output_buffer;
+    i2s->out_ctrl_blocks[1] = &i2s->output_buffer[STEREO_BUFFER_SIZE];
+
+    // DMA I2S OUT control channel - wrap read address every 8 bytes (2 words)
+    dma_channel_config c = dma_channel_get_default_config(i2s->dma_ch_out_ctrl);
+    channel_config_set_read_increment(&c, true);
+    channel_config_set_write_increment(&c, false);
+    channel_config_set_ring(&c, false, 3);
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+    dma_channel_configure(i2s->dma_ch_out_ctrl, &c, &dma_hw->ch[i2s->dma_ch_out_data].al3_read_addr_trig, i2s->out_ctrl_blocks, 1, false);
+
+    c = dma_channel_get_default_config(i2s->dma_ch_out_data);
+    channel_config_set_read_increment(&c, true);
+    channel_config_set_write_increment(&c, false);
+    channel_config_set_chain_to(&c, i2s->dma_ch_out_ctrl);
+    channel_config_set_dreq(&c, pio_get_dreq(i2s->pio, i2s->sm_dout, true));
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_16); 
+
+    dma_channel_configure(i2s->dma_ch_out_data,
+                          &c,
+                          &i2s->pio->txf[i2s->sm_dout],  // Destination pointer
+                          NULL,                          // Source pointer, will be set by ctrl channel
+                          STEREO_BUFFER_SIZE,            // Number of transfers
+                          false                          // Start immediately
+    );
+
+    // Output channel triggers the DMA interrupt handler when buffer is sent
+    // dma_channel_set_irq0_enabled(i2s->dma_ch_out_data, true);
+    // irq_set_exclusive_handler(DMA_IRQ_0, dma_handler);
+    // irq_set_enabled(DMA_IRQ_0, true);
+
+    // Enable output DMA channel
+    dma_channel_start(i2s->dma_ch_out_ctrl);  // This will trigger-start the out chan
 }
 
 /* Initializes an I2S block (of 3 state machines) on the designated PIO.
@@ -214,6 +261,41 @@ static void i2s_sync_program_init(PIO pio, const i2s_config* config, pio_i2s* i2
     pio_sm_set_clkdiv_int_frac(pio, i2s->sm_dout, clocks.bck_d, clocks.bck_f);
 }
 
+static void i2s_out_program_init(PIO pio, const i2s_config* config, pio_i2s* i2s) {
+    uint offset  = 0;
+    i2s->pio     = pio;
+    i2s->sm_mask = 0;
+
+    pio_i2s_clocks clocks;
+    calc_clocks(config, &clocks);
+
+    if (config->sck_enable) {
+        // Check that SCK and BCK are in perfect whole ratio
+        if (!validate_sck_bck_sync(&clocks)) {
+            /* There are lots of possible causes for this, a few are:
+             *  - You are running a system clock frequency that doesn't divide well at all into SCK or BCK
+             *  - You are running a 24-bit I2S with a 256x SCK multiplier (RP2040 cannot support this)
+             *  - You have mucked with the PIO ratios or done something silly.
+             */
+            panic("SCK and BCK are not in sync.");
+        }
+
+        // SCK block
+        i2s->sm_sck = pio_claim_unused_sm(pio, true);
+        i2s->sm_mask |= (1u << i2s->sm_sck);
+        offset = pio_add_program(pio, &i2s_sck_program);
+        i2s_sck_program_init(pio, i2s->sm_sck, offset, config->sck_pin);
+        pio_sm_set_clkdiv_int_frac(pio, i2s->sm_sck, clocks.sck_d, clocks.sck_f);
+    }
+
+    // Out block, clocked with BCK
+    i2s->sm_dout = pio_claim_unused_sm(pio, true);
+    i2s->sm_mask |= (1u << i2s->sm_dout);
+    offset = pio_add_program(pio, &i2s_out_master_program);
+    i2s_out_master_program_init(pio, i2s->sm_dout, offset, config->bit_depth, config->dout_pin, config->clock_pin_base);
+    pio_sm_set_clkdiv_int_frac(pio, i2s->sm_dout, clocks.bck_d, clocks.bck_f);
+}
+
 void i2s_program_start_slaved(PIO pio, const i2s_config* config, void (*dma_handler)(void), pio_i2s* i2s) {
     if (((uint32_t)i2s & 0x7) != 0) {
         panic("pio_i2s argument must be 8-byte aligned!");
@@ -229,5 +311,14 @@ void i2s_program_start_synched(PIO pio, const i2s_config* config, void (*dma_han
     }
     i2s_sync_program_init(pio, config, i2s);
     dma_double_buffer_init(i2s, dma_handler);
+    pio_enable_sm_mask_in_sync(i2s->pio, i2s->sm_mask);
+}
+
+void i2s_program_start_out(PIO pio, const i2s_config* config, void (*dma_handler)(void), pio_i2s* i2s) {
+    if (((uint32_t)i2s & 0x7) != 0) {
+        panic("pio_i2s argument must be 8-byte aligned!");
+    }
+    i2s_out_program_init(pio, config, i2s);
+    dma_output_only_init(i2s, dma_handler);
     pio_enable_sm_mask_in_sync(i2s->pio, i2s->sm_mask);
 }

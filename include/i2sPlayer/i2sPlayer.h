@@ -9,6 +9,9 @@
 
 #include "i2s.h"
 
+static bool write_to = false;
+static bool first_buff = true;
+
 /** Status codes returned by drawBMP() and loadBMP() */
 typedef enum AudioReturnCode {
   AUDIO_SUCCESS,            // Successful load (or image clipped off screen)
@@ -17,7 +20,7 @@ typedef enum AudioReturnCode {
   //IMAGE_ERR_MALLOC          // Could not allocate image (loadBMP() only)
 }AudioReturnCode;
 
-AudioReturnCode i2sPlayer_playWAV(const char *filename, bool transact);
+AudioReturnCode i2sPlayer_playWAV(const char const *filename, pio_i2s *i2s);
 void i2sPlayer_propertiesWAV(const char const * filename);
 
 #endif

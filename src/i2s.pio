@@ -61,14 +61,14 @@ public entry_point:
                     ;        /--- LRCLK
                     ;        |/-- BCLK
 frameL:             ;        ||
-    set x, 30         side 0b00 ; start of Left frame
+    set x, 14         side 0b00 ; start of Left frame (16-bit: 16 - 2 = 14)
     pull noblock      side 0b01 ; One clock after edge change with no data
 dataL:
     out pins, 1       side 0b00
     jmp x-- dataL     side 0b01
 
 frameR:
-    set x, 30         side 0b10
+    set x, 14         side 0b10  ; (16-bit: 16 - 2 = 14)
     pull noblock      side 0b11 ; One clock after edge change with no data
 dataR:
     out pins, 1       side 0b10
